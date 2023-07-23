@@ -601,10 +601,8 @@ static void read_pointer(libinput_drv_state_t *state, struct libinput_event *eve
       evt->slot = slot;
       break;
     case LIBINPUT_EVENT_POINTER_MOTION:
-      evt->point.x += libinput_event_pointer_get_dx(pointer_event);
-      evt->point.y += libinput_event_pointer_get_dy(pointer_event);
-      evt->point.x = LV_CLAMP(0, evt->point.x, drv->hor_res - 1);
-      evt->point.y = LV_CLAMP(0, evt->point.y, drv->ver_res - 1);
+      evt->point.x = libinput_event_pointer_get_dx(pointer_event);
+      evt->point.y = libinput_event_pointer_get_dy(pointer_event);
       evt->is_relative = true;
       break;
     case LIBINPUT_EVENT_POINTER_MOTION_ABSOLUTE: {
