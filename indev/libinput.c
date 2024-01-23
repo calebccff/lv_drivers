@@ -9,6 +9,8 @@
 #include "libinput_drv.h"
 #if USE_LIBINPUT || USE_BSD_LIBINPUT
 
+#include "../lvgl/src/display/lv_display_private.h"
+
 #include <stdio.h>
 #include <unistd.h>
 #include <linux/limits.h>
@@ -517,7 +519,7 @@ static void read_pointer(libinput_drv_state_t *state, struct libinput_event *eve
 
   /* We need to read unrotated display dimensions directly from the driver because libinput won't account
    * for any rotation inside of LVGL */
-  lv_disp_t *disp = lv_disp_get_default();
+  lv_display_t *disp = lv_disp_get_default();
 
   /* ignore more than 2 fingers as it will only confuse LVGL */
   if (touch_event && (slot = libinput_event_touch_get_slot(touch_event)) > 1)
@@ -535,7 +537,7 @@ static void read_pointer(libinput_drv_state_t *state, struct libinput_event *eve
       }
       evt->point.x = x;
       evt->point.y = y;
-      evt->pressed = LV_INDEV_STATE_PR;
+      evt->pressed = LV_INDEV_STATE_PRESSED;
       state->slots[slot].point = evt->point;
       state->slots[slot].pressed = evt->pressed;
       break;
@@ -552,40 +554,40 @@ static void read_pointer(libinput_drv_state_t *state, struct libinput_event *eve
        * still pressed and insert dummy events so that both release events trigger at the correct
        * position.
        */
-      if (slot == 0 && state->slots[1].pressed == LV_INDEV_STATE_PR) {
+      if (slot == 0 && state->slots[1].pressed == LV_INDEV_STATE_PRESSED) {
         /* The first finger is released while the second finger is still pressed.
          * We turn P1 > P2 > R1 > R2 into P1 > P2 > (P1) > R1 > (P2) > R2.
          */
 
         /* Inject the dummy press event for the first finger */
         libinput_lv_event_t *synth_evt = evt;
-        synth_evt->pressed = LV_INDEV_STATE_PR;
+        synth_evt->pressed = LV_INDEV_STATE_PRESSED;
         synth_evt->point = state->slots[0].point;
 
         /* Append the real release event for the first finger */
         evt = new_event(state);
-        evt->pressed = LV_INDEV_STATE_REL;
+        evt->pressed = LV_INDEV_STATE_RELEASED;
         evt->point = state->slots[0].point;
 
         /* Inject the dummy press event for the second finger */
         synth_evt = new_event(state);
-        synth_evt->pressed = LV_INDEV_STATE_PR;
+        synth_evt->pressed = LV_INDEV_STATE_PRESSED;
         synth_evt->point = state->slots[1].point;
-      } else if (slot == 1 && state->slots[0].pressed == LV_INDEV_STATE_PR) {
+      } else if (slot == 1 && state->slots[0].pressed == LV_INDEV_STATE_PRESSED) {
         /* The second finger is released while the first finger is still pressed.
          * We turn P1 > P2 > R2 > R1 into P1 > P2 > R2 > (P1) > R1.
          */
 
         /* Append the real release event for the second finger */
-        evt->pressed = LV_INDEV_STATE_REL;
+        evt->pressed = LV_INDEV_STATE_RELEASED;
         evt->point = state->slots[1].point;
 
         /* Inject the dummy press event for the first finger */
         libinput_lv_event_t *synth_evt = new_event(state);
-        synth_evt->pressed = LV_INDEV_STATE_PR;
+        synth_evt->pressed = LV_INDEV_STATE_PRESSED;
         synth_evt->point = state->slots[0].point;
       } else {
-        evt->pressed = LV_INDEV_STATE_REL;
+        evt->pressed = LV_INDEV_STATE_RELEASED;
         evt->point = state->slots[slot].point;
       }
 
@@ -613,7 +615,7 @@ static void read_pointer(libinput_drv_state_t *state, struct libinput_event *eve
     }
     case LIBINPUT_EVENT_POINTER_BUTTON: {
       enum libinput_button_state button_state = libinput_event_pointer_get_button_state(pointer_event); 
-      state->pointer_button_down = button_state == LIBINPUT_BUTTON_STATE_RELEASED ? LV_INDEV_STATE_REL : LV_INDEV_STATE_PR;
+      state->pointer_button_down = button_state == LIBINPUT_BUTTON_STATE_RELEASED ? LV_INDEV_STATE_RELEASED : LV_INDEV_STATE_PRESSED;
       evt->point.x = state->pointer_position.x;
       evt->point.y = state->pointer_position.y;
       evt->pressed = state->pointer_button_down;
@@ -676,7 +678,7 @@ static void read_keypad(libinput_drv_state_t *state, struct libinput_event *even
 #endif /* USE_XKB */
       if (evt->key_val != 0) {
         /* Only record button state when actual output is produced to prevent widgets from refreshing */
-        evt->pressed = (key_state == LIBINPUT_KEY_STATE_RELEASED) ? LV_INDEV_STATE_REL : LV_INDEV_STATE_PR;
+        evt->pressed = (key_state == LIBINPUT_KEY_STATE_RELEASED) ? LV_INDEV_STATE_RELEASED : LV_INDEV_STATE_PRESSED;
 
         // just release the key immediatly after it got pressed.
         // but don't handle special keys where holding a key makes sense
@@ -687,7 +689,7 @@ static void read_keypad(libinput_drv_state_t *state, struct libinput_event *even
             evt->key_val != LV_KEY_DOWN &&
             key_state == LIBINPUT_KEY_STATE_PRESSED) {
           libinput_lv_event_t *release_evt = new_event(state);
-          release_evt->pressed = LV_INDEV_STATE_REL;
+          release_evt->pressed = LV_INDEV_STATE_RELEASED;
           release_evt->key_val = evt->key_val;
         }
       }
