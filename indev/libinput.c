@@ -262,12 +262,12 @@ void libinput_deinit_state(libinput_drv_state_t *state)
 /**
  * Read available input events via libinput using the default driver state. Use this function if you only want
  * to connect a single device.
- * @param indev_drv driver object itself
+ * @param indev indev object itself
  * @param data store the libinput data here
  */
-void libinput_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
+void libinput_read(lv_indev_t * indev, lv_indev_data_t * data)
 {
-  libinput_read_state(&default_state, indev_drv, data);
+  libinput_read_state(&default_state, indev, data);
 }
 
 libinput_lv_event_t *get_event(libinput_drv_state_t *state)
@@ -351,12 +351,12 @@ static void *libinput_poll_worker(void* data)
  * Read available input events via libinput using a specific driver state. Use this function if you want to
  * connect multiple devices.
  * @param state the driver state to use
- * @param indev_drv driver object itself
+ * @param indev indev object itself
  * @param data store the libinput data here
  */
-void libinput_read_state(libinput_drv_state_t * state, lv_indev_drv_t * indev_drv, lv_indev_data_t * data)
+void libinput_read_state(libinput_drv_state_t * state, lv_indev_t * indev, lv_indev_data_t * data)
 {
-  LV_UNUSED(indev_drv);
+  LV_UNUSED(indev);
 
   pthread_mutex_lock(&state->event_lock);
 
@@ -517,7 +517,7 @@ static void read_pointer(libinput_drv_state_t *state, struct libinput_event *eve
 
   /* We need to read unrotated display dimensions directly from the driver because libinput won't account
    * for any rotation inside of LVGL */
-  lv_disp_drv_t *drv = lv_disp_get_default()->driver;
+  lv_disp_t *disp = lv_disp_get_default();
 
   /* ignore more than 2 fingers as it will only confuse LVGL */
   if (touch_event && (slot = libinput_event_touch_get_slot(touch_event)) > 1)
@@ -528,9 +528,9 @@ static void read_pointer(libinput_drv_state_t *state, struct libinput_event *eve
   switch (type) {
     case LIBINPUT_EVENT_TOUCH_MOTION:
     case LIBINPUT_EVENT_TOUCH_DOWN: {
-      lv_coord_t x = libinput_event_touch_get_x_transformed(touch_event, drv->physical_hor_res > 0 ? drv->physical_hor_res : drv->hor_res) - drv->offset_x;
-      lv_coord_t y = libinput_event_touch_get_y_transformed(touch_event, drv->physical_ver_res > 0 ? drv->physical_ver_res : drv->ver_res) - drv->offset_y;
-      if (x < 0 || x > drv->hor_res || y < 0 || y > drv->ver_res) {
+      lv_coord_t x = libinput_event_touch_get_x_transformed(touch_event, disp->physical_hor_res > 0 ? disp->physical_hor_res : disp->hor_res) - disp->offset_x;
+      lv_coord_t y = libinput_event_touch_get_y_transformed(touch_event, disp->physical_ver_res > 0 ? disp->physical_ver_res : disp->ver_res) - disp->offset_y;
+      if (x < 0 || x > disp->hor_res || y < 0 || y > disp->ver_res) {
         break; /* ignore touches that are out of bounds */
       }
       evt->point.x = x;
@@ -594,16 +594,16 @@ static void read_pointer(libinput_drv_state_t *state, struct libinput_event *eve
     case LIBINPUT_EVENT_POINTER_MOTION:
       state->pointer_position.x += libinput_event_pointer_get_dx(pointer_event);
       state->pointer_position.y += libinput_event_pointer_get_dy(pointer_event);
-      state->pointer_position.x = LV_CLAMP(0, state->pointer_position.x, drv->hor_res - 1);
-      state->pointer_position.y = LV_CLAMP(0, state->pointer_position.y, drv->ver_res - 1);
+      state->pointer_position.x = LV_CLAMP(0, state->pointer_position.x, disp->hor_res - 1);
+      state->pointer_position.y = LV_CLAMP(0, state->pointer_position.y, disp->ver_res - 1);
       evt->point.x = state->pointer_position.x;
       evt->point.y = state->pointer_position.y;
       evt->pressed = state->pointer_button_down;
       break;
     case LIBINPUT_EVENT_POINTER_MOTION_ABSOLUTE: {
-      lv_coord_t x_pointer = libinput_event_pointer_get_absolute_x_transformed(pointer_event, drv->physical_hor_res > 0 ? drv->physical_hor_res : drv->hor_res) - drv->offset_x;
-      lv_coord_t y_pointer = libinput_event_pointer_get_absolute_y_transformed(pointer_event, drv->physical_ver_res > 0 ? drv->physical_ver_res : drv->ver_res) - drv->offset_y;
-      if (x_pointer < 0 || x_pointer > drv->hor_res || y_pointer < 0 || y_pointer > drv->ver_res) {
+      lv_coord_t x_pointer = libinput_event_pointer_get_absolute_x_transformed(pointer_event, disp->physical_hor_res > 0 ? disp->physical_hor_res : disp->hor_res) - disp->offset_x;
+      lv_coord_t y_pointer = libinput_event_pointer_get_absolute_y_transformed(pointer_event, disp->physical_ver_res > 0 ? disp->physical_ver_res : disp->ver_res) - disp->offset_y;
+      if (x_pointer < 0 || x_pointer > disp->hor_res || y_pointer < 0 || y_pointer > disp->ver_res) {
         break; /* ignore pointer events that are out of bounds */
       }
       evt->point.x = x_pointer;
