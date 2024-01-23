@@ -152,18 +152,18 @@ bool libinput_set_file_state(libinput_drv_state_t *state, char* dev_name);
 /**
  * Read available input events via libinput using the default driver state. Use this function if you only want
  * to connect a single device.
- * @param indev_drv driver object itself
+ * @param indev indev object itself
  * @param data store the libinput data here
  */
-void libinput_read(lv_indev_drv_t * indev_drv, lv_indev_data_t * data);
+void libinput_read(lv_indev_t * indev, lv_indev_data_t * data);
 /**
  * Read available input events via libinput using a specific driver state. Use this function if you want to
  * connect multiple devices.
  * @param state the driver state to use
- * @param indev_drv driver object itself
+ * @param indev indev object itself
  * @param data store the libinput data here
  */
-void libinput_read_state(libinput_drv_state_t * state, lv_indev_drv_t * indev_drv, lv_indev_data_t * data);
+void libinput_read_state(libinput_drv_state_t * state, lv_indev_t * indev, lv_indev_data_t * data);
 
 /**********************
  *      MACROS
